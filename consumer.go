@@ -19,7 +19,7 @@ type Consumer struct {
 func NewConsumer(p Params) (*Consumer, error) {
 	u := url.URL{Scheme: "ws", Host: p.Addr, Path: fmt.Sprintf("/consume/%s", p.Topic)}
 
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"X-Producer-ID": []string{p.ID}})
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"X-Request-ID": []string{p.ID}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to server with server: %w", err)
 	}
@@ -32,22 +32,22 @@ func NewConsumer(p Params) (*Consumer, error) {
 	}, nil
 }
 
-func (c *Consumer) Consume() (<-chan Message, <-chan error) {
-	chMsgs := make(chan Message, 128)
-	chErrors := make(chan error, 8)
+func (c *Consumer) Consume() chan Message {
+	chMsgs := make(chan Message, 32)
 
 	go func() {
 		for {
-			_, bytes, err := c.conn.ReadMessage()
+			t, bytes, err := c.conn.ReadMessage()
 			if err != nil {
-				chErrors <- fmt.Errorf("failed to consume message: %s", err.Error())
-				continue
+				return
+			}
+			if t == websocket.CloseMessage {
+				return
 			}
 
 			var msg Message
 			err = json.Unmarshal(bytes, &msg)
 			if err != nil {
-				chErrors <- fmt.Errorf("failed to decode message: %s", err.Error())
 				continue
 			}
 
@@ -55,5 +55,10 @@ func (c *Consumer) Consume() (<-chan Message, <-chan error) {
 		}
 	}()
 
-	return chMsgs, chErrors
+	return chMsgs
+}
+
+func (c *Consumer) Close() error {
+	c.conn.WriteMessage(websocket.CloseMessage, nil)
+	return c.conn.Close()
 }

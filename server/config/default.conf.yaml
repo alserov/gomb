@@ -1,4 +1,4 @@
-addr: 127.0.0.1:6336
-credentials:
-  password:
-  user:
+addr: 0.0.0.0:6336
+timeouts:
+  consumer: 10s
+  producer: 10s

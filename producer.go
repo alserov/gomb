@@ -38,9 +38,9 @@ type Params struct {
 func NewProducer(p Params) (*Producer, error) {
 	u := url.URL{Scheme: "ws", Host: p.Addr, Path: fmt.Sprintf("/produce/%s", p.Topic)}
 
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"X-Producer-ID": []string{p.ID}})
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), http.Header{"X-Request-ID": []string{p.ID}})
 	if err != nil {
-		return nil, fmt.Errorf("failed to server with server: %w", err)
+		return nil, fmt.Errorf("failed to dial with server: %w", err)
 	}
 
 	retries := p.RetryAmount
@@ -85,6 +85,7 @@ func (p *Producer) Reconnect() error {
 func (p *Producer) Produce(m *Message) error {
 	m.ProducerID = p.ID
 	m.ID = strconv.Itoa(time.Now().Nanosecond())
+	m.SentAt = time.Now()
 
 	b, err := json.Marshal(m)
 	if err != nil {
@@ -102,8 +103,6 @@ func (p *Producer) Produce(m *Message) error {
 }
 
 func (p *Producer) Close() error {
-	if err := p.conn.Close(); err != nil {
-		return fmt.Errorf("failed to close connection: %w", err)
-	}
-	return nil
+	p.conn.WriteMessage(websocket.CloseMessage, nil)
+	return p.conn.Close()
 }
