@@ -26,7 +26,7 @@ func main() {
 	})
 	if err != nil {
 		...
-    }
+        }
 }
 
 ```
@@ -45,19 +45,13 @@ import (
 )
 
 func main() {
-	c, err := gomb.NewConsumer(gomb.Params{Addr: "127.0.0.1:6336", Topic: "topic1"})
+	c, err := gomb.NewConsumer(gomb.Params{Addr: "127.0.0.1:6336", Topic: "topic1", ID: "2"})
 	defer c.Close()
 	if err != nil {
 		...
 	}
 
-	chMsgs, chErr := c.Consume()
-	go func() {
-		for err = range chErr {
-			...
-		}
-	}()
-
+	chMsgs := c.Consume()
 	for msg := range chMsgs {
 		fmt.Println("received message: ", msg)
 	}
@@ -69,7 +63,9 @@ func main() {
 ## Env parameters for server
 
 ```dotenv
-GOMB_ADDR="0.0.0.0:6336" // address where server will be serving
-GOMB_TOPICS="topic1,topic2" // predefined topics
+# address where server will be serving
+GOMB_ADDR="0.0.0.0:6336"
+# predefined topics, number after the name of the topic means buffer size, be careful with memory usage
+GOMB_TOPICS="topic1:8,topic2:16"
 ```
 
